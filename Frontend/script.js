@@ -1,76 +1,76 @@
 const cont = document.querySelector(".container");
 
-const basePath = "./src/images/my_cards/";
-
-const masty = ["serdeczko/", "rombik/", "mogila/", "pika/"]
-
-const cards = [
-    `${basePath}${masty[0]}6`,
-    `${basePath}${masty[0]}7`,
-    `${basePath}${masty[0]}8`,
-    `${basePath}${masty[0]}9`,
-    `${basePath}${masty[0]}10`,
-    `${basePath}${masty[0]}b`,
-    `${basePath}${masty[0]}d`,
-    `${basePath}${masty[0]}k`,
-    `${basePath}${masty[0]}t`,
-
-    `${basePath}${masty[1]}6`,
-    `${basePath}${masty[1]}7`,
-    `${basePath}${masty[1]}8`,
-    `${basePath}${masty[1]}9`,
-    `${basePath}${masty[1]}10`,
-    `${basePath}${masty[1]}b`,
-    `${basePath}${masty[1]}d`,
-    `${basePath}${masty[1]}k`,
-    `${basePath}${masty[1]}t`,
-
-    `${basePath}${masty[2]}6`,
-    `${basePath}${masty[2]}7`,
-    `${basePath}${masty[2]}8`,
-    `${basePath}${masty[2]}9`,
-    `${basePath}${masty[2]}10`,
-    `${basePath}${masty[2]}b`,
-    `${basePath}${masty[2]}d`,
-    `${basePath}${masty[2]}k`,
-    `${basePath}${masty[2]}t`,
-
-    `${basePath}${masty[3]}6`,
-    `${basePath}${masty[3]}7`,
-    `${basePath}${masty[3]}8`,
-    `${basePath}${masty[3]}9`,
-    `${basePath}${masty[3]}10`,
-    `${basePath}${masty[3]}b`,
-    `${basePath}${masty[3]}d`,
-    `${basePath}${masty[3]}k`,
-    `${basePath}${masty[3]}t`,
+const suits = ["spades", "hearts", "diamonds", "clubs"];
+const cardsNames = [
+    {
+        name: '6'
+    },
+    {
+        name: '7'
+    },
+    {
+        name: '8'
+    },
+    {
+        name: '9'
+    },
+    {
+        name: '10'
+    },
+    {
+        name: 'J'
+    },
+    {
+        name: 'Q'
+    },
+    {
+        name: 'K'
+    },
+    {
+        name: 'A'
+    }
 ]
+const deck = [];
 
-cards.forEach(card => {
-    const img = document.createElement('img')
-    img.src = `${card}.png`
+const firstPlayer = []
 
-    cont.appendChild(img)
+suits.forEach(suit => {
+    let i = 6;
+
+    cardsNames.forEach(item => {
+        const name = item.name
+        const card = {
+            name: name,
+            suit: suit,
+            value: i,
+            src: `./src/assets/cards/${suit}/${name}.png`
+        }
+
+        i++;
+        deck.push(card);
+    })
 })
 
-// 1. Создаем подключение
-const socket = new WebSocket('ws://78.88.142.214:8080');
+const yourCards = [];
 
-socket.onopen = () => {
-    console.log('Подключение к серверу установлено');
+const ws = new WebSocket("http://78.88.142.214:8080")
 
-    // Отправляем что-то на сервер
-    socket.send('Привет!');
-};
+ws.onopen = () => {
+}
 
-socket.onmessage = (event) => {
-    // Парсим входящую JSON-строку в объект
-    const data = JSON.parse(event.data);
+ws.onmessage = (e) => {
+    const data = JSON.parse(e.data)
 
-    // Доступ к полям сообщения
-    console.log('Текст от сервера:', data.message);
+    renderUserDeck(data.deck)
+    console.log(data)
+}
 
-    if (data.client_message) {
-        console.log('Сервер получил от нас:', data.client_message);
-    }
-};
+function renderUserDeck(arr) {
+    console.log(arr)
+    arr.forEach(card => {
+        const img = document.createElement('img')
+        img.src = card.src
+
+        cont.appendChild(img)
+    })
+}

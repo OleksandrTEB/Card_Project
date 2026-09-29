@@ -1,16 +1,72 @@
-const { WebSocketServer } = require('ws');
+const {WebSocketServer} = require('ws');
 
-// Запускаем WebSocket-сервер на порту 8080
-const wss = new WebSocketServer({ port: 8080 });
+
+const suits = ["spades", "hearts", "diamonds", "clubs"];
+const cardsNames = [
+    {
+        name: '6'
+    },
+    {
+        name: '7'
+    },
+    {
+        name: '8'
+    },
+    {
+        name: '9'
+    },
+    {
+        name: '10'
+    },
+    {
+        name: 'J'
+    },
+    {
+        name: 'Q'
+    },
+    {
+        name: 'K'
+    },
+    {
+        name: 'A'
+    }
+]
+const deck = [];
+
+const firstPlayer = []
+
+suits.forEach(suit => {
+    let i = 6;
+
+    cardsNames.forEach(item => {
+        const name = item.name
+        const card = {
+            name: name,
+            suit: suit,
+            value: i,
+            src: `./src/assets/cards/${suit}/${name}.png`
+        }
+
+        i++;
+        deck.push(card);
+    })
+})
+
+for(let i = 0; i < 6; i++) {
+    firstPlayer.push(deck[Math.floor(Math.random() * deck.length)])
+}
+
+
+const wss = new WebSocketServer(
+    {
+        port: 8080
+    }
+);
 
 wss.on('connection', (ws) => {
-    // 1. IP-адрес клиента
-    console.log('Подключился клиент с IP:', ws._socket.remoteAddress);
+    const data = JSON.stringify({
+        deck: firstPlayer
+    })
 
-    // 2. Статус подключения (1 = OPEN)
-    console.log('Статус подключения:', ws.readyState);
-
-    // 3. Добавление и вывод своих данных
-    ws.id;
-    console.log('Назначен ID клиенту:', ws.id);
+    ws.send(data)
 });

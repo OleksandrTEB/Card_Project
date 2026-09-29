@@ -1,19 +1,27 @@
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Custom";
 }
 
-.container {
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    row-gap: 1rem;
-    padding: 20px;
+body main .deck_info {
+  display: flex;
+  flex-direction: column;
+  width: 150px;
+  gap: 10px;
+}
+body main .container {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  row-gap: 1rem;
+  padding: 20px;
+}
+body main img {
+  object-fit: cover;
+  max-width: 150px;
+  border: 2px solid black;
+  border-radius: 15px;
 }
 
-img {
-    object-fit: cover;
-    max-width: 150px;
-    border: 2px solid black;
-    border-radius: 15px;
-}
+/*# sourceMappingURL=style.css.map */
