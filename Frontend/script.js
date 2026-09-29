@@ -52,3 +52,25 @@ cards.forEach(card => {
 
     cont.appendChild(img)
 })
+
+// 1. Создаем подключение
+const socket = new WebSocket('ws://78.88.142.214:8080');
+
+socket.onopen = () => {
+    console.log('Подключение к серверу установлено');
+
+    // Отправляем что-то на сервер
+    socket.send('Привет!');
+};
+
+socket.onmessage = (event) => {
+    // Парсим входящую JSON-строку в объект
+    const data = JSON.parse(event.data);
+
+    // Доступ к полям сообщения
+    console.log('Текст от сервера:', data.message);
+
+    if (data.client_message) {
+        console.log('Сервер получил от нас:', data.client_message);
+    }
+};
