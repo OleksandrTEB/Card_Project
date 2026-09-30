@@ -69,17 +69,35 @@ wss.on('connection', (ws) => {
         const data = JSON.parse(e)
 
         switch (data.type) {
-            case "user_data":
+            case "user_data": {
                 ws.id = data.user_id;
                 ws.username = data.username;
-                break;
 
-            case "create_game":
+
+
+                if (rooms.size > 0) {
+                    rooms.forEach(room => {
+                        if (room.players.has(ws.id)) {
+                            ws.send(JSON.stringify({
+                                type: "start_game",
+                                user_deck: room.players.get(ws.id).get("player_deck"),
+                                amount_all_deck: room.deck.length
+                            }))
+                        }
+                    })
+                }
+            }
+            break;
+
+            case "create_game": {
                 const result = createRoom(data.title, data.amount_users)
                 if (result === true) {
                     ws.room = data.title;
 
+                    const idForGame = new Date().getTime();
+
                     broadcast({
+                        id: idForGame,
                         type: "new_game",
                         title: data.title,
                         amount: data.amount_users
@@ -90,14 +108,16 @@ wss.on('connection', (ws) => {
                     player.set("ws", ws)
 
                     rooms.get(ws.room).players.set(ws.id, player)
+                    rooms.get(ws.room).id = idForGame;
                 }
-                break;
+            }
+            break;
 
-            case "join_game":
+            case "join_game": {
                 ws.room = data.room;
 
                 const currentRoom = rooms.get(ws.room);
-                if(!currentRoom) break;
+                if (!currentRoom) break;
 
                 const currentDeck = currentRoom.deck;
 
@@ -107,7 +127,7 @@ wss.on('connection', (ws) => {
 
                 currentRoom.players.set(ws.id, player)
 
-                if(checkToPalay(data.room)) {
+                if (checkToPalay(data.room)) {
                     currentRoom.players.forEach((p) => {
                         giveCards(currentDeck, p);
                     });
@@ -119,12 +139,39 @@ wss.on('connection', (ws) => {
                         if (playerSocket && playerSocket.readyState === 1) {
                             playerSocket.send(JSON.stringify({
                                 type: "start_game",
-                                user_deck: userDeck
+                                user_deck: userDeck,
+                                amount_all_deck: currentRoom.deck.length
                             }))
                         }
                     })
+
+                    broadcast({
+                        id: currentRoom.id,
+                        type: "delete_game"
+                    })
                 }
-                break;
+
+                broadcast({
+                    id: currentRoom.id,
+                    type: "player_join",
+                    players: currentRoom.players.size
+                })
+            }
+            break;
+
+            case "exit": {
+                const currentRoom = rooms.get(ws.room);
+
+                currentRoom.players.forEach(p => {
+                    p.get("ws").send(JSON.stringify({
+                        type: "stop_game"
+                    }))
+                })
+
+                rooms.delete(ws.room);
+            }
+            break;
+
             default:
                 break;
         }
@@ -146,19 +193,21 @@ function createRoom(key, amountUsers) {
 }
 
 function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
+    const newDeck = [...array];
+
+    for (let i = newDeck.length - 1; i > 0; i--) {
 
         const j = Math.floor(Math.random() * (i + 1));
 
-        [array[i], array[j]] = [array[j], array[i]];
+        [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
     }
-    return array;
+    return newDeck;
 }
 
 function giveCards(deck, player) {
     const playerDeck = []
 
-    for(let i = 0; i < 6; i++) {
+    for (let i = 0; i < 6; i++) {
         playerDeck.push(deck.pop());
     }
 

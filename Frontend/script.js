@@ -2,7 +2,7 @@ const userId = getOrCreateId();
 
 function getOrCreateId() {
     const id = +localStorage.getItem("user_id")
-    if(!id) {
+    if (!id) {
         const newId = new Date().getTime();
 
         localStorage.setItem("user_id", `${newId}`)
@@ -17,7 +17,7 @@ const userName = getOrCreateUserName();
 
 function getOrCreateUserName() {
     const username = localStorage.getItem("username")
-    if(!username) {
+    if (!username) {
         const newUsername = prompt("Please enter Nick Name:");
 
         localStorage.setItem("username", newUsername)
@@ -29,10 +29,15 @@ function getOrCreateUserName() {
 }
 
 
-const cont = document.querySelector(".container");
+const cont = document.querySelector(".container_for_user_deck");
 const createNewGameBtn = document.querySelector(".create_game");
 const game_list = document.querySelector(".game_list")
 const games = document.querySelector(".games")
+const players_select = document.querySelector(".players_select")
+const select_container = document.querySelector(".select_container")
+const exit_btn = document.querySelector(".exit_btn")
+const game_zone = document.querySelector(".game_zone")
+const countCards = document.querySelector(".countCards")
 
 const suitOrder = {
     'clubs': 1,
@@ -41,11 +46,25 @@ const suitOrder = {
     'spades': 4
 };
 
+const gamesToJoin = new Map();
+
+let amountPlayers = 0;
+
 const ws = new WebSocket("http://78.88.142.214:8080")
 
-function sendData(data) {
-    ws.send(JSON.stringify(data));
+function sendData(socket, data) {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(data));
+    }
 }
+
+exit_btn.addEventListener('click', () => {
+    const data = {
+        type: "exit"
+    };
+
+    sendData(ws, data);
+})
 
 ws.onopen = () => {
     const data = {
@@ -54,7 +73,7 @@ ws.onopen = () => {
         username: userName
     }
 
-    sendData(data);
+    sendData(ws, data);
 }
 
 ws.onmessage = (e) => {
@@ -62,57 +81,124 @@ ws.onmessage = (e) => {
 
     switch (data.type) {
         case "new_game":
-            addNewGame(data.title, data.amount)
+            const newGame = {
+                title: data.title,
+                max_players: data.amount,
+                current_players_amount: 1
+            }
+
+            gamesToJoin.set(data.id, newGame);
+
+            drawGamesToJoin()
             break;
         case "start_game":
             sortUserDeck(data.user_deck)
             renderUserDeck(data.user_deck)
-            hideElement(games)
+            startGame(data.amount_all_deck)
+            break;
+        case "player_join":
+            if(gamesToJoin.get(data.id)) {
+                gamesToJoin.get(data.id).current_players_amount = data.players;
+                drawGamesToJoin()
+            }
+            break;
+        case "stop_game":
+            stopGame()
+            break;
+        case "delete_game":
+            gamesToJoin.delete(data.id);
+            drawGamesToJoin()
             break;
     }
+}
+
+
+function startGame(number) {
+    hideElement(games)
+    hideElement(createNewGameBtn)
+    showElement(game_zone)
+
+    countCards.textContent = `Cards in deck: ${number}`
+}
+
+function stopGame() {
+    showElement(games)
+    showElement(createNewGameBtn)
+    hideElement(game_zone)
 }
 
 function hideElement(element) {
     element.style.display = "none";
 }
 
-createNewGameBtn.addEventListener('click', () => {
-    const data = {
-        type: "create_game",
-        amount_users: +prompt("Input amount users:"),
-        title: prompt("Input game title:")
-    }
+function showElement(element) {
+    element.style.display = "flex";
+}
 
-    sendData(data);
+select_container.addEventListener('click', (e) => {
+    const players = +e.target.dataset.players;
+
+    if (players) {
+        amountPlayers = players;
+
+        let title = "";
+
+        do {
+            title = prompt("Input game title:");
+
+            if (title === null) {
+                return;
+            }
+        } while (title.trim() === "")
+
+        const data = {
+            type: "create_game",
+            amount_users: amountPlayers,
+            title: title
+        }
+
+        sendData(ws, data);
+        hideElement(players_select)
+    }
 })
 
-function addNewGame(title, amount) {
-    const div = document.createElement('div')
-    div.classList.add('game')
+createNewGameBtn.addEventListener('click', () => {
+    showElement(players_select)
+})
 
-    const span = document.createElement('span')
-    span.classList.add('title')
-    span.textContent = title
-    div.appendChild(span)
+function drawGamesToJoin() {
+    game_list.textContent = "";
 
-    const btn = document.createElement('button')
-    btn.classList.add('join')
-    btn.textContent = "Join"
-    btn.dataset.key = title
-    div.appendChild(btn)
+    if(gamesToJoin.size < 1) return;
 
-    const span1 = document.createElement('span')
-    span1.classList.add('amount')
-    span1.textContent = `1/${amount}`
-    div.appendChild(span1)
+    gamesToJoin.forEach(item => {
+        const div = document.createElement('div')
+        div.classList.add('game')
 
-    game_list.appendChild(div)
+        const span = document.createElement('span')
+        span.classList.add('title')
+        span.textContent = item.title
+        div.appendChild(span)
+
+        const btn = document.createElement('button')
+        btn.classList.add('join')
+        btn.textContent = "Join"
+        btn.dataset.key = item.title
+        div.appendChild(btn)
+
+        const span1 = document.createElement('span')
+        span1.classList.add('amount')
+        span1.textContent = `${item.current_players_amount}/${item.max_players}`
+        div.appendChild(span1)
+
+        game_list.appendChild(div)
+    })
 }
 
 game_list.addEventListener('click', (e) => {
     const key = e.target.dataset.key
     if (key) {
-        sendData({
+        sendData(ws, {
             type: "join_game",
             room: key
         })
@@ -120,6 +206,8 @@ game_list.addEventListener('click', (e) => {
 })
 
 function renderUserDeck(arr) {
+    cont.textContent = "";
+
     arr.forEach(card => {
         const img = document.createElement('img')
         img.src = card.src
@@ -136,8 +224,12 @@ function sortUserDeck(deck) {
             return suitDiff;
         }
 
-        return a.rank - b.rank;
+        return a.value - b.value;
     });
-
-    console.log(deck)
 }
+
+function init() {
+    hideElement(game_zone)
+}
+
+init()

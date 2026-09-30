@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
@@ -12,25 +12,38 @@
 <body>
 
 <main>
-<!--    <div class="deck_info">-->
-<!--        <span class="countCards">Cards in deck: 36</span>-->
-<!--        <img class="deck_img" src="./src/assets/logotip/logo.png" alt="Deck" />-->
-<!--    </div>-->
-
-    <div class="container"></div>
-    <button class="create_game">SS</button>
-
     <div class="games">
         <span class="title">All games:</span>
-        <div class="game_list">
-<!--            <div class="game">-->
-<!--                <span class="title">KOCH BRUDER</span>-->
-<!--                <button class="join">Join</button>-->
-<!--                <span class="amount">0/2</span>-->
-<!--            </div>-->
+        <div class="game_list"></div>
+    </div>
+
+    <div class="game_zone">
+        <div class="opponent_info">
+            <span class="username">Pidor</span>
+        </div>
+
+        <div class="deck_info">
+            <span class="countCards"></span>
+            <img class="deck_img" src="./src/assets/logotip/logo.png" alt="Deck"/>
+        </div>
+
+        <div class="container_for_user_deck"></div>
+
+        <div class="exit_button">
+            <button class="exit_btn">Exit</button>
         </div>
     </div>
+    <button class="create_game">Create New Game</button>
 </main>
+
+<div class="players_select">
+    <span>How many players?</span>
+    <div class="select_container">
+        <span class="option" data-players="2">2</span>
+        <span class="option" data-players="3">3</span>
+        <span class="option" data-players="4">4</span>
+    </div>
+</div>
 
 <script src="./script.js"></script>
 </body>
