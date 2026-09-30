@@ -1,72 +1,172 @@
 const {WebSocketServer} = require('ws');
 
-
-const suits = ["spades", "hearts", "diamonds", "clubs"];
-const cardsNames = [
-    {
-        name: '6'
-    },
-    {
-        name: '7'
-    },
-    {
-        name: '8'
-    },
-    {
-        name: '9'
-    },
-    {
-        name: '10'
-    },
-    {
-        name: 'J'
-    },
-    {
-        name: 'Q'
-    },
-    {
-        name: 'K'
-    },
-    {
-        name: 'A'
-    }
-]
+const rooms = new Map();
 const deck = [];
+createDeck()
 
-const firstPlayer = []
-
-suits.forEach(suit => {
-    let i = 6;
-
-    cardsNames.forEach(item => {
-        const name = item.name
-        const card = {
-            name: name,
-            suit: suit,
-            value: i,
-            src: `./src/assets/cards/${suit}/${name}.png`
+function createDeck() {
+    const suits = ["spades", "hearts", "diamonds", "clubs"];
+    const cardsNames = [
+        {
+            name: '6'
+        },
+        {
+            name: '7'
+        },
+        {
+            name: '8'
+        },
+        {
+            name: '9'
+        },
+        {
+            name: '10'
+        },
+        {
+            name: 'J'
+        },
+        {
+            name: 'Q'
+        },
+        {
+            name: 'K'
+        },
+        {
+            name: 'A'
         }
+    ]
 
-        i++;
-        deck.push(card);
+    suits.forEach(suit => {
+        let i = 6;
+
+        cardsNames.forEach(item => {
+            const name = item.name
+            const card = {
+                name: name,
+                suit: suit,
+                value: i,
+                src: `./src/assets/cards/${suit}/${name}.png`
+            }
+
+            i++;
+            deck.push(card);
+        })
     })
-})
-
-for(let i = 0; i < 6; i++) {
-    firstPlayer.push(deck[Math.floor(Math.random() * deck.length)])
 }
 
+const wss = new WebSocketServer({port: 8080});
 
-const wss = new WebSocketServer(
-    {
-        port: 8080
-    }
-);
+function broadcast(data) {
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+        }
+    });
+}
 
 wss.on('connection', (ws) => {
-    const data = JSON.stringify({
-        deck: firstPlayer
-    })
+    ws.on('message', (e) => {
+        const data = JSON.parse(e)
 
-    ws.send(data)
+        switch (data.type) {
+            case "user_data":
+                ws.id = data.user_id;
+                ws.username = data.username;
+                break;
+
+            case "create_game":
+                const result = createRoom(data.title, data.amount_users)
+                if (result === true) {
+                    ws.room = data.title;
+
+                    broadcast({
+                        type: "new_game",
+                        title: data.title,
+                        amount: data.amount_users
+                    })
+
+                    const player = new Map();
+                    player.set("username", ws.username)
+                    player.set("ws", ws)
+
+                    rooms.get(ws.room).players.set(ws.id, player)
+                }
+                break;
+
+            case "join_game":
+                ws.room = data.room;
+
+                const currentRoom = rooms.get(ws.room);
+                if(!currentRoom) break;
+
+                const currentDeck = currentRoom.deck;
+
+                const player = new Map();
+                player.set("username", ws.username)
+                player.set("ws", ws)
+
+                currentRoom.players.set(ws.id, player)
+
+                if(checkToPalay(data.room)) {
+                    currentRoom.players.forEach((p) => {
+                        giveCards(currentDeck, p);
+                    });
+
+                    currentRoom.players.forEach(p => {
+                        const playerSocket = p.get("ws");
+                        const userDeck = p.get("player_deck")
+
+                        if (playerSocket && playerSocket.readyState === 1) {
+                            playerSocket.send(JSON.stringify({
+                                type: "start_game",
+                                user_deck: userDeck
+                            }))
+                        }
+                    })
+                }
+                break;
+            default:
+                break;
+        }
+    })
 });
+
+function createRoom(key, amountUsers) {
+    if (amountUsers > 1 && amountUsers < 7) {
+        rooms.set(key, {
+            max_players: amountUsers,
+            players: new Map(),
+            deck: shuffle(deck)
+        })
+
+        return true;
+    }
+
+    return false;
+}
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+
+        const j = Math.floor(Math.random() * (i + 1));
+
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function giveCards(deck, player) {
+    const playerDeck = []
+
+    for(let i = 0; i < 6; i++) {
+        playerDeck.push(deck.pop());
+    }
+
+    player.set("player_deck", playerDeck)
+}
+
+function checkToPalay(room) {
+    const maxPayers = rooms.get(room).max_players
+
+    return maxPayers === rooms.get(room).players.size;
+}
