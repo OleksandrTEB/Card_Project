@@ -7,8 +7,16 @@
     user-select: none;
 }
 
+:root {
+    --cw: 70px;
+    --gold: #c9a35b;
+    --gold-soft: rgba(201, 163, 91, 0.42);
+}
+
 body {
-    background-color: #2f7c2f;
+    background: radial-gradient(115% 85% at 50% 40%, #2d6f50 0%, #1c503a 46%, #0d2f1f 100%);
+    width: 100vw;
+    height: 100vh;
 
     main {
         display: flex;
@@ -24,10 +32,36 @@ body {
             width: 100vw;
             height: 100vh;
 
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: radial-gradient(115% 85% at 50% 40%, #2d6f50 0%, #1c503a 46%, #0d2f1f 100%);
+
             .opponent_info {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
                 position: absolute;
-                left: 45%;
+                left: 50%;
+                transform: translateX(-50%);
                 top: 20px;
+
+                .opponent_deck {
+                    display: flex;
+                    justify-content: center;
+                    height: calc(var(--cw) * 1.42 + 40px);
+                    padding: 0 14px 12px;
+
+                    .player_card {
+                        width: var(--cw);
+                        height: calc(var(--cw) * 1.42);
+                        position: relative;
+                        flex: none;
+                        transform: rotate(var(--r, 0deg)) translateY(var(--y, 0px));
+                        transition: transform .26s cubic-bezier(.2, .8, .3, 1), margin .25s ease;
+                        cursor: pointer;
+                    }
+                }
             }
 
             .deck_info {
@@ -47,9 +81,24 @@ body {
 
             .container_for_user_deck {
                 display: flex;
-                flex-direction: row;
-                gap: 10px;
-                padding: 20px;
+                justify-content: center;
+                height: calc(var(--cw) * 1.42 + 40px);
+                padding: 0 14px 12px;
+
+                .player_card {
+                    width: var(--cw);
+                    height: calc(var(--cw) * 1.42);
+                    position: relative;
+                    flex: none;
+                    transform: rotate(var(--r, 0deg)) translateY(var(--y, 0px));
+                    transition: transform .26s cubic-bezier(.2, .8, .3, 1), margin .25s ease;
+                    cursor: pointer;
+
+                    &:hover {
+                        transform: translateY(-26px) rotate(0deg) scale(1.2);
+                        z-index: 60;
+                    }
+                }
             }
 
             .exit_button {
@@ -129,8 +178,8 @@ body {
 }
 
 img {
-    aspect-ratio: auto;
-    max-width: 130px;
+    width: var(--cw);
+    height: calc(var(--cw) * 1.42);
     border: 2px solid black;
     border-radius: 15px;
 }

@@ -1,6 +1,7 @@
 const {WebSocketServer} = require('ws');
 
 const rooms = new Map();
+const games = new Map();
 const deck = [];
 createDeck()
 
@@ -76,15 +77,45 @@ wss.on('connection', (ws) => {
 
 
                 if (rooms.size > 0) {
+                    const playersToSend = []
+
                     rooms.forEach(room => {
                         if (room.players.has(ws.id)) {
+                            room.players.forEach((p) => {
+                                const data = {
+                                    username: p.get("username"),
+                                    deck_size: p.get("player_deck").length
+                                }
+
+                                playersToSend.push(data)
+                            });
+
                             ws.send(JSON.stringify({
                                 type: "start_game",
                                 user_deck: room.players.get(ws.id).get("player_deck"),
-                                amount_all_deck: room.deck.length
+                                amount_all_deck: room.deck.length,
+                                players: playersToSend
                             }))
                         }
                     })
+
+                    const gamesToSend = []
+
+                    games.forEach(g => {
+                        const data = {
+                            id: g.id,
+                            title: g.title,
+                            max_players: g.max_players,
+                            current_players: 1
+                        }
+
+                        gamesToSend.push(data)
+                    })
+
+                    ws.send(JSON.stringify({
+                        type: "send_games",
+                        games: gamesToSend
+                    }));
                 }
             }
             break;
@@ -93,8 +124,21 @@ wss.on('connection', (ws) => {
                 const result = createRoom(data.title, data.amount_users)
                 if (result === true) {
                     ws.room = data.title;
-
                     const idForGame = new Date().getTime();
+
+                    const player = new Map();
+                    player.set("username", ws.username)
+                    player.set("ws", ws)
+
+                    rooms.get(ws.room).players.set(ws.id, player)
+                    rooms.get(ws.room).title = data.title;
+                    rooms.get(ws.room).id = idForGame;
+
+                    games.set(idForGame, {
+                        id: idForGame,
+                        title: data.title,
+                        max_players: data.amount_users
+                    });
 
                     broadcast({
                         id: idForGame,
@@ -102,13 +146,6 @@ wss.on('connection', (ws) => {
                         title: data.title,
                         amount: data.amount_users
                     })
-
-                    const player = new Map();
-                    player.set("username", ws.username)
-                    player.set("ws", ws)
-
-                    rooms.get(ws.room).players.set(ws.id, player)
-                    rooms.get(ws.room).id = idForGame;
                 }
             }
             break;
@@ -128,8 +165,24 @@ wss.on('connection', (ws) => {
                 currentRoom.players.set(ws.id, player)
 
                 if (checkToPalay(data.room)) {
+                    const playersToSend = []
+
+                    const step = Math.floor(Math.random() * currentRoom.players.size)
+
+                    currentRoom.who_step = step
+
+                    let index = 0;
                     currentRoom.players.forEach((p) => {
                         giveCards(currentDeck, p);
+                        p.set("number", index)
+
+                        const data = {
+                            username: p.get("username"),
+                            deck_size: p.get("player_deck").length
+                        }
+
+                        playersToSend.push(data)
+                        index++;
                     });
 
                     currentRoom.players.forEach(p => {
@@ -140,7 +193,8 @@ wss.on('connection', (ws) => {
                             playerSocket.send(JSON.stringify({
                                 type: "start_game",
                                 user_deck: userDeck,
-                                amount_all_deck: currentRoom.deck.length
+                                amount_all_deck: currentRoom.deck.length,
+                                players: playersToSend
                             }))
                         }
                     })
@@ -168,6 +222,7 @@ wss.on('connection', (ws) => {
                     }))
                 })
 
+                games.delete(rooms.get(ws.room).id)
                 rooms.delete(ws.room);
             }
             break;

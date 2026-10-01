@@ -1,3 +1,5 @@
+import { renderUserDeck, renderOpponentInfo } from "./src/scripts/style_and_animation.js";
+
 const userId = getOrCreateId();
 
 function getOrCreateId() {
@@ -29,7 +31,6 @@ function getOrCreateUserName() {
 }
 
 
-const cont = document.querySelector(".container_for_user_deck");
 const createNewGameBtn = document.querySelector(".create_game");
 const game_list = document.querySelector(".game_list")
 const games = document.querySelector(".games")
@@ -38,6 +39,9 @@ const select_container = document.querySelector(".select_container")
 const exit_btn = document.querySelector(".exit_btn")
 const game_zone = document.querySelector(".game_zone")
 const countCards = document.querySelector(".countCards")
+const opponentInfo = document.querySelector(".opponent_info")
+const step = document.querySelector(".step")
+
 
 const suitOrder = {
     'clubs': 1,
@@ -49,6 +53,8 @@ const suitOrder = {
 const gamesToJoin = new Map();
 
 let amountPlayers = 0;
+
+const players = new Map();
 
 const ws = new WebSocket("http://78.88.142.214:8080")
 
@@ -92,6 +98,7 @@ ws.onmessage = (e) => {
             drawGamesToJoin()
             break;
         case "start_game":
+            renderOpponentInfo(data.players, userName)
             sortUserDeck(data.user_deck)
             renderUserDeck(data.user_deck)
             startGame(data.amount_all_deck)
@@ -109,6 +116,19 @@ ws.onmessage = (e) => {
             gamesToJoin.delete(data.id);
             drawGamesToJoin()
             break;
+        case "send_games":
+            data.games.forEach(g => {
+                const dataForArr = {
+                    title: g.title,
+                    max_players: g.max_players,
+                    current_players_amount: g.current_players
+                }
+
+                gamesToJoin.set(g.id, dataForArr);
+            })
+
+            drawGamesToJoin()
+            break;
     }
 }
 
@@ -117,6 +137,7 @@ function startGame(number) {
     hideElement(games)
     hideElement(createNewGameBtn)
     showElement(game_zone)
+    showElement(opponentInfo)
 
     countCards.textContent = `Cards in deck: ${number}`
 }
@@ -125,6 +146,7 @@ function stopGame() {
     showElement(games)
     showElement(createNewGameBtn)
     hideElement(game_zone)
+    hideElement(opponentInfo)
 }
 
 function hideElement(element) {
@@ -204,17 +226,6 @@ game_list.addEventListener('click', (e) => {
         })
     }
 })
-
-function renderUserDeck(arr) {
-    cont.textContent = "";
-
-    arr.forEach(card => {
-        const img = document.createElement('img')
-        img.src = card.src
-
-        cont.appendChild(img)
-    })
-}
 
 function sortUserDeck(deck) {
     deck.sort((a, b) => {
